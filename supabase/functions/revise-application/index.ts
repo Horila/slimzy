@@ -1,16 +1,17 @@
 // Revises an existing draft per a chat instruction, still constrained to the source CV.
-import { authedClient } from "../_shared/supabase.ts";
+import { authedClient, CORS_HEADERS } from "../_shared/supabase.ts";
 import { callGemini, NO_FABRICATION_RULE, parseJsonReply } from "../_shared/gemini.ts";
 import { verifyDraft } from "../_shared/verify.ts";
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
   try {
     const { supabase, user } = await authedClient(req);
-    if (!user) return new Response("unauthorized", { status: 401 });
+    if (!user) return new Response("unauthorized", { status: 401, headers: CORS_HEADERS });
 
     const { application_id, instruction } = await req.json();
     if (!application_id || !instruction) {
-      return new Response("application_id and instruction required", { status: 400 });
+      return new Response("application_id and instruction required", { status: 400, headers: CORS_HEADERS });
     }
 
     const [{ data: cv }, { data: app }] = await Promise.all([
@@ -18,8 +19,8 @@ Deno.serve(async (req) => {
       supabase.from("applications").select("*").eq("id", application_id).eq("user_id", user.id)
         .single(),
     ]);
-    if (!cv) return new Response("no CV uploaded yet", { status: 400 });
-    if (!app) return new Response("application not found", { status: 404 });
+    if (!cv) return new Response("no CV uploaded yet", { status: 400, headers: CORS_HEADERS });
+    if (!app) return new Response("application not found", { status: 404, headers: CORS_HEADERS });
 
     await supabase.from("chat_messages").insert({
       user_id: user.id,
@@ -28,9 +29,10 @@ Deno.serve(async (req) => {
       content: instruction,
     });
 
+    const lang = app.language === "nl" ? "Dutch" : "English";
     const systemPrompt =
       `You revise an existing tailored CV and cover letter per the user's instruction. ` +
-      `${NO_FABRICATION_RULE} ` +
+      `${NO_FABRICATION_RULE} Keep writing in ${lang}. ` +
       `Respond as strict JSON: {"cv": "...", "cover_letter": "..."} with no other text.`;
     const userPrompt =
       `SOURCE_CV:\n${cv.raw_text}\n\nCURRENT CV DRAFT:\n${app.cv_draft}\n\n` +
@@ -51,7 +53,7 @@ Deno.serve(async (req) => {
       .eq("id", application_id)
       .select()
       .single();
-    if (error) return new Response(error.message, { status: 500 });
+    if (error) return new Response(error.message, { status: 500, headers: CORS_HEADERS });
 
     await supabase.from("chat_messages").insert({
       user_id: user.id,
@@ -60,8 +62,8 @@ Deno.serve(async (req) => {
       content: "Updated the draft per your request.",
     });
 
-    return Response.json(updated);
+    return Response.json(updated, { headers: CORS_HEADERS });
   } catch (e) {
-    return new Response(String(e?.message ?? e), { status: 500 });
+    return new Response(String(e?.message ?? e), { status: 500, headers: CORS_HEADERS });
   }
 });

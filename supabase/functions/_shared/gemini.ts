@@ -1,5 +1,5 @@
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY")!;
-const MODEL = "gemini-2.0-flash";
+const MODEL = "gemini-2.5-flash"; // higher output cap than 2.0-flash, needed for full CV + cover letter in one reply
 
 export async function callGemini(systemPrompt: string, userPrompt: string): Promise<string> {
   const url =
@@ -10,13 +10,23 @@ export async function callGemini(systemPrompt: string, userPrompt: string): Prom
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-      generationConfig: { responseMimeType: "application/json" },
+      generationConfig: {
+        responseMimeType: "application/json",
+        maxOutputTokens: 65536,
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     }),
   });
   if (!res.ok) throw new Error(`gemini error: ${res.status} ${await res.text()}`);
   const body = await res.json();
-  const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error(`gemini returned no content: ${JSON.stringify(body)}`);
+  const candidate = body.candidates?.[0];
+  const text = candidate?.content?.parts?.[0]?.text;
+  if (!text) {
+    if (candidate?.finishReason === "MAX_TOKENS") {
+      throw new Error("gemini reply was cut off (hit max output tokens)");
+    }
+    throw new Error(`gemini returned no content: ${JSON.stringify(body)}`);
+  }
   return text;
 }
 

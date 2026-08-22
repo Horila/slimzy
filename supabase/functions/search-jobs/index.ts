@@ -1,18 +1,20 @@
 // Fetches Netherlands job listings from Adzuna, caches into `jobs` for the caller.
-import { authedClient } from "../_shared/supabase.ts";
+import { authedClient, CORS_HEADERS } from "../_shared/supabase.ts";
 
 const ADZUNA_APP_ID = Deno.env.get("ADZUNA_APP_ID")!;
 const ADZUNA_APP_KEY = Deno.env.get("ADZUNA_APP_KEY")!;
 const PAGES = 2; // 50 results/page -> ~100 results/scan, stays well under 250 calls/day free tier
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
   try {
     const { supabase, user } = await authedClient(req);
-    if (!user) return new Response("unauthorized", { status: 401 });
+    if (!user) return new Response("unauthorized", { status: 401, headers: CORS_HEADERS });
 
     const { keywords, location } = await req.json();
-    if (!keywords) return new Response("keywords required", { status: 400 });
+    if (!keywords) return new Response("keywords required", { status: 400, headers: CORS_HEADERS });
 
+    const scannedAt = new Date().toISOString();
     const rows = [];
     for (let page = 1; page <= PAGES; page++) {
       const url = new URL(`https://api.adzuna.com/v1/api/jobs/nl/search/${page}`);
@@ -29,7 +31,9 @@ Deno.serve(async (req) => {
         // Page 1 failing means the whole scan failed (bad keys, rate limit) -
         // surface it instead of silently reporting "0 jobs found". A later page
         // failing (e.g. transient) just means we keep whatever we already have.
-        if (page === 1) return new Response(`adzuna error: ${res.status} ${detail}`, { status: 502 });
+        if (page === 1) {
+          return new Response(`adzuna error: ${res.status} ${detail}`, { status: 502, headers: CORS_HEADERS });
+        }
         break;
       }
       const body = await res.json();
@@ -46,6 +50,7 @@ Deno.serve(async (req) => {
           salary: r.salary_min || r.salary_max
             ? `${r.salary_min ?? "?"}-${r.salary_max ?? "?"}`
             : null,
+          fetched_at: scannedAt,
         });
       }
       if (!body.results?.length) break;
@@ -55,11 +60,11 @@ Deno.serve(async (req) => {
       const { error } = await supabase.from("jobs").upsert(rows, {
         onConflict: "user_id,source,external_id",
       });
-      if (error) return new Response(error.message, { status: 500 });
+      if (error) return new Response(error.message, { status: 500, headers: CORS_HEADERS });
     }
 
-    return Response.json({ count: rows.length });
+    return Response.json({ count: rows.length, scanned_at: scannedAt }, { headers: CORS_HEADERS });
   } catch (e) {
-    return new Response(String(e?.message ?? e), { status: 500 });
+    return new Response(String(e?.message ?? e), { status: 500, headers: CORS_HEADERS });
   }
 });

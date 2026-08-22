@@ -1,5 +1,15 @@
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+// supabase-js only gives a generic "non-2xx status code" message by default -
+// the function's actual error text is on error.context (the raw Response).
+async function functionErrorText(error) {
+  try {
+    return (await error.context?.text()) || error.message;
+  } catch {
+    return error.message;
+  }
+}
+
 let currentJob = null;
 let currentApp = null;
 
@@ -41,10 +51,14 @@ function showTab(name) {
 $("cv-file").addEventListener("change", async () => {
   const file = $("cv-file").files[0];
   if (!file) return;
-  if (file.type === "application/pdf") {
-    $("cv-text").value = await extractPdfText(file);
-  } else {
-    $("cv-text").value = await file.text();
+  $("cv-status").textContent = "Reading file...";
+  try {
+    $("cv-text").value = file.type === "application/pdf"
+      ? await extractPdfText(file)
+      : await file.text();
+    $("cv-status").textContent = "";
+  } catch (e) {
+    $("cv-status").textContent = `Couldn't read file: ${e?.message ?? e}`;
   }
 });
 
@@ -94,15 +108,17 @@ $("scan-jobs-btn").addEventListener("click", async () => {
   const { data, error } = await sb.functions.invoke("search-jobs", {
     body: { keywords, location: $("job-location").value.trim() || undefined },
   });
-  $("scan-status").textContent = error ? error.message : `Found ${data.count} jobs.`;
-  await loadJobs();
+  $("scan-status").textContent = error ? await functionErrorText(error) : `Found ${data.count} jobs.`;
+  await loadJobs(error ? null : data.scanned_at);
   showTab("jobs");
 });
 
 // ---- jobs ----
 
-async function loadJobs() {
-  const { data: jobs, error } = await sb.from("jobs").select("*").order("fetched_at", { ascending: false });
+async function loadJobs(sinceScan) {
+  let query = sb.from("jobs").select("*").order("fetched_at", { ascending: false });
+  if (sinceScan) query = query.gte("fetched_at", sinceScan);
+  const { data: jobs, error } = await query;
   const list = $("jobs-list");
   list.innerHTML = "";
   if (error || !jobs?.length) {
@@ -151,9 +167,9 @@ async function generateApplication(job) {
   showTab("draft");
 
   const { data: app, error } = await sb.functions.invoke("generate-application", {
-    body: { job_id: job.id },
+    body: { job_id: job.id, language: $("draft-language").value },
   });
-  if (error) { $("draft-cv").textContent = `Error: ${error.message}`; return; }
+  if (error) { $("draft-cv").textContent = `Error: ${await functionErrorText(error)}`; return; }
   currentApp = app;
   renderDraft();
   loadChat();
@@ -188,7 +204,7 @@ $("chat-form").addEventListener("submit", async (e) => {
   const { data: updated, error } = await sb.functions.invoke("revise-application", {
     body: { application_id: currentApp.id, instruction },
   });
-  if (error) { appendChat("assistant", `Error: ${error.message}`); return; }
+  if (error) { appendChat("assistant", `Error: ${await functionErrorText(error)}`); return; }
   currentApp = updated;
   renderDraft();
   appendChat("assistant", "Updated the draft above.");

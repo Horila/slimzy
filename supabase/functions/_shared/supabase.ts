@@ -1,5 +1,10 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+export const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
+};
+
 export async function authedClient(req: Request) {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
