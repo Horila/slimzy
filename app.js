@@ -1,4 +1,4 @@
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 let currentJob = null;
 let currentApp = null;
@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 
 // ---- auth ----
 
-supabase.auth.onAuthStateChange((_event, session) => {
+sb.auth.onAuthStateChange((_event, session) => {
   $("login-view").hidden = !!session;
   $("app-view").hidden = !session;
   if (session) loadJobs();
@@ -16,14 +16,14 @@ supabase.auth.onAuthStateChange((_event, session) => {
 $("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   $("login-error").textContent = "";
-  const { error } = await supabase.auth.signInWithPassword({
+  const { error } = await sb.auth.signInWithPassword({
     email: $("login-email").value,
     password: $("login-password").value,
   });
   if (error) $("login-error").textContent = error.message;
 });
 
-$("logout-btn").addEventListener("click", () => supabase.auth.signOut());
+$("logout-btn").addEventListener("click", () => sb.auth.signOut());
 
 // ---- tabs ----
 
@@ -67,18 +67,18 @@ $("save-cv-btn").addEventListener("click", async () => {
   if (!rawText) { $("cv-status").textContent = "Paste or upload a CV first."; return; }
   $("cv-status").textContent = "Saving...";
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await sb.auth.getUser();
   const file = $("cv-file").files[0];
   const filename = file ? file.name : "cv.txt";
 
   if (file) {
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await sb.storage
       .from("cvs")
       .upload(`${user.id}/${filename}`, file, { upsert: true });
     if (uploadError) { $("cv-status").textContent = `File upload failed: ${uploadError.message}`; return; }
   }
 
-  const { error } = await supabase.from("cv").upsert({
+  const { error } = await sb.from("cv").upsert({
     user_id: user.id,
     filename,
     raw_text: rawText,
@@ -91,7 +91,7 @@ $("scan-jobs-btn").addEventListener("click", async () => {
   const keywords = $("job-keywords").value.trim();
   if (!keywords) { $("scan-status").textContent = "Enter keywords first."; return; }
   $("scan-status").textContent = "Scanning...";
-  const { data, error } = await supabase.functions.invoke("search-jobs", {
+  const { data, error } = await sb.functions.invoke("search-jobs", {
     body: { keywords, location: $("job-location").value.trim() || undefined },
   });
   $("scan-status").textContent = error ? error.message : `Found ${data.count} jobs.`;
@@ -102,7 +102,7 @@ $("scan-jobs-btn").addEventListener("click", async () => {
 // ---- jobs ----
 
 async function loadJobs() {
-  const { data: jobs, error } = await supabase.from("jobs").select("*").order("fetched_at", { ascending: false });
+  const { data: jobs, error } = await sb.from("jobs").select("*").order("fetched_at", { ascending: false });
   const list = $("jobs-list");
   list.innerHTML = "";
   if (error || !jobs?.length) {
@@ -150,7 +150,7 @@ async function generateApplication(job) {
   $("draft-warnings").textContent = "";
   showTab("draft");
 
-  const { data: app, error } = await supabase.functions.invoke("generate-application", {
+  const { data: app, error } = await sb.functions.invoke("generate-application", {
     body: { job_id: job.id },
   });
   if (error) { $("draft-cv").textContent = `Error: ${error.message}`; return; }
@@ -170,7 +170,7 @@ function renderDraft() {
 
 $("approve-btn").addEventListener("click", async () => {
   if (!currentApp) return;
-  await supabase.from("applications").update({ status: "approved" }).eq("id", currentApp.id);
+  await sb.from("applications").update({ status: "approved" }).eq("id", currentApp.id);
   currentApp.status = "approved";
   alert("Marked approved.");
 });
@@ -185,7 +185,7 @@ $("chat-form").addEventListener("submit", async (e) => {
   $("chat-input").value = "";
   appendChat("user", instruction);
 
-  const { data: updated, error } = await supabase.functions.invoke("revise-application", {
+  const { data: updated, error } = await sb.functions.invoke("revise-application", {
     body: { application_id: currentApp.id, instruction },
   });
   if (error) { appendChat("assistant", `Error: ${error.message}`); return; }
@@ -196,7 +196,7 @@ $("chat-form").addEventListener("submit", async (e) => {
 
 async function loadChat() {
   $("chat-log").innerHTML = "";
-  const { data: messages } = await supabase
+  const { data: messages } = await sb
     .from("chat_messages")
     .select("*")
     .eq("application_id", currentApp.id)
