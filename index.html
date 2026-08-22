@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Agent NL</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login-view" class="view">
+  <h1>Job Agent NL</h1>
+  <form id="login-form">
+    <input type="email" id="login-email" placeholder="Email" required>
+    <input type="password" id="login-password" placeholder="Password" required>
+    <button type="submit">Log in</button>
+  </form>
+  <p id="login-error" class="error"></p>
+</div>
+
+<div id="app-view" class="view" hidden>
+  <header>
+    <h1>Job Agent NL</h1>
+    <button id="logout-btn">Log out</button>
+  </header>
+
+  <nav id="tabs">
+    <button class="tab-btn active" data-tab="setup">Setup</button>
+    <button class="tab-btn" data-tab="jobs">Jobs</button>
+    <button class="tab-btn" data-tab="draft">Draft</button>
+  </nav>
+
+  <section id="tab-setup" class="tab">
+    <h2>Your CV</h2>
+    <p>Upload a PDF or paste your CV as plain text. This is the only source the AI is
+       allowed to draw facts from — it will never add anything that isn't here.</p>
+    <input type="file" id="cv-file" accept=".pdf,.txt">
+    <textarea id="cv-text" rows="10" placeholder="...or paste your CV text here"></textarea>
+    <button id="save-cv-btn">Save CV</button>
+    <p id="cv-status"></p>
+
+    <h2>Job search</h2>
+    <input type="text" id="job-keywords" placeholder="Keywords, e.g. 'frontend developer'">
+    <input type="text" id="job-location" placeholder="Location (optional, e.g. Amsterdam)">
+    <button id="scan-jobs-btn">Scan jobs</button>
+    <p id="scan-status"></p>
+  </section>
+
+  <section id="tab-jobs" class="tab" hidden>
+    <h2>Jobs found</h2>
+    <div id="jobs-list"></div>
+  </section>
+
+  <section id="tab-draft" class="tab" hidden>
+    <h2 id="draft-job-title"></h2>
+    <div id="draft-warnings" class="warnings"></div>
+
+    <h3>Tailored CV</h3>
+    <pre id="draft-cv" class="draft-box"></pre>
+
+    <h3>Cover letter</h3>
+    <pre id="draft-cover" class="draft-box"></pre>
+
+    <div class="draft-actions">
+      <button id="approve-btn">Approve</button>
+      <button id="print-btn">Print / Save as PDF</button>
+    </div>
+
+    <h3>Chat (ask for changes)</h3>
+    <div id="chat-log"></div>
+    <form id="chat-form">
+      <input type="text" id="chat-input" placeholder="e.g. 'make the cover letter shorter'">
+      <button type="submit">Send</button>
+    </form>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
