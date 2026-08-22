@@ -1,6 +1,6 @@
 // Generates a tailored CV + cover letter for one job, constrained to the source CV.
 import { authedClient, CORS_HEADERS } from "../_shared/supabase.ts";
-import { callGemini, NO_FABRICATION_RULE, parseJsonReply } from "../_shared/gemini.ts";
+import { callGemini, CV_FORMAT_RULE, NO_FABRICATION_RULE, parseJsonReply } from "../_shared/gemini.ts";
 import { verifyDraft } from "../_shared/verify.ts";
 
 Deno.serve(async (req) => {
@@ -21,22 +21,23 @@ Deno.serve(async (req) => {
     if (!job) return new Response("job not found", { status: 404, headers: CORS_HEADERS });
 
     const systemPrompt =
-      `You write a tailored CV and cover letter for a specific job. ${NO_FABRICATION_RULE} ` +
+      `You write a tailored, print-ready CV and cover letter for a specific job. ${NO_FABRICATION_RULE} ` +
+      `${CV_FORMAT_RULE} ` +
       `Write the CV and cover letter in ${lang}, regardless of the language SOURCE_CV is written in. ` +
-      `Respond as strict JSON: {"cv": "...", "cover_letter": "..."} with no other text.`;
+      `Respond as strict JSON: {"cv_html": "...", "cover_letter": "..."} with no other text.`;
     const userPrompt =
       `SOURCE_CV:\n${cv.raw_text}\n\nJOB TITLE: ${job.title}\nCOMPANY: ${job.company ?? ""}\n` +
       `JOB DESCRIPTION:\n${job.description ?? ""}`;
 
     const parsed = parseJsonReply(await callGemini(systemPrompt, userPrompt));
-    const warnings = await verifyDraft(cv.raw_text, parsed.cv);
+    const warnings = await verifyDraft(cv.raw_text, parsed.cv_html);
 
     const { data: app, error } = await supabase
       .from("applications")
       .insert({
         user_id: user.id,
         job_id,
-        cv_draft: parsed.cv,
+        cv_draft: parsed.cv_html,
         cover_letter_draft: parsed.cover_letter,
         verify_warnings: JSON.stringify(warnings),
         language: language === "nl" ? "nl" : "en",

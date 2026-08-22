@@ -33,6 +33,24 @@ button { width: auto; cursor: pointer; }
   padding: 0.75rem;
   background: #fafafa;
 }
+.cv-render {
+  white-space: normal;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.4;
+}
+.cv-render h1 { font-size: 1.8rem; margin: 0 0 0.15rem; }
+.cv-render h2 {
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #999;
+  margin: 1.1rem 0 0.4rem;
+  padding-bottom: 0.15rem;
+}
+.cv-render p { margin: 0.3rem 0; font-size: 0.95rem; }
+.cv-render ul { margin: 0.2rem 0 0.6rem; padding-left: 1.2rem; }
+.cv-render li { font-size: 0.95rem; margin: 0.15rem 0; }
+.cv-render strong { font-size: 1rem; }
 .warnings {
   background: #fff3cd;
   border: 1px solid #ffe08a;
@@ -47,5 +65,10 @@ button { width: auto; cursor: pointer; }
 #chat-log .user { font-weight: bold; }
 
 @media print {
-  header, #tabs, #chat-form, #chat-log, .draft-actions, .warnings { display: none; }
+  @page { margin: 1.5cm; }
+  header, #tabs, #chat-form, #chat-log, .draft-actions, .warnings, #draft-job-title { display: none; }
+  body { max-width: none; padding: 0; }
+  .cv-render h2 { break-after: avoid; }
+  .cv-render ul, .cv-render p { break-inside: avoid; }
+  #cover-heading { break-before: page; }
 }

@@ -39,6 +39,23 @@ export function parseJsonReply(raw: string): any {
   }
 }
 
+export const CV_FORMAT_RULE =
+  "Structure cv_html as a print-ready CV using semantic HTML (h1/h2/p/ul/li/strong only, no inline " +
+  "styles, no <html>/<head>/<body> wrapper): " +
+  "(1) <h1> with the candidate's name from SOURCE_CV, contact details in a <p> below it. " +
+  "(2) A 'Why this role' <h2> section: a <p> with exactly 2 sentences on why the candidate fits this " +
+  "specific job, based only on their real experience. " +
+  "(3) A 'Relevant skills' <h2> section: a <ul> of the 5-8 skills from SOURCE_CV that most directly " +
+  "match this job's requirements, most relevant first. " +
+  "(4) A 'Work experience' <h2> section listing every job from SOURCE_CV, most relevant to this role " +
+  "first: for roles clearly relevant to the target job, give the title/company/dates in <strong> " +
+  "followed by a <ul> of 3-5 bullet points elaborating the duties and achievements that relate to this " +
+  "job; for roles with little relevance, give only a single brief <p> line (title, company, dates) with " +
+  "no bullet points. " +
+  "(5) An 'Education' <h2> section (and any certifications) from SOURCE_CV, briefly. " +
+  "Never invent a skill, duty, or achievement not already in SOURCE_CV - only reorder, elaborate on the " +
+  "wording of, and prioritize what's already there.";
+
 export const NO_FABRICATION_RULE =
   "You may only use facts (employers, dates, job titles, skills, education, " +
   "achievements) that appear explicitly in SOURCE_CV below. Rewrite, reorder, " +

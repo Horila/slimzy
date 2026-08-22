@@ -180,7 +180,9 @@ async function generateApplication(job) {
 }
 
 function renderDraft() {
-  $("draft-cv").textContent = currentApp.cv_draft;
+  // The CV is Gemini-generated HTML (headings/lists/etc for a print-ready layout), scoped to
+  // this one logged-in user's own content - safe to render, but strip <script> defensively.
+  $("draft-cv").innerHTML = (currentApp.cv_draft ?? "").replace(/<script[\s\S]*?<\/script>/gi, "");
   $("draft-cover").textContent = currentApp.cover_letter_draft;
   const warnings = currentApp.verify_warnings ? JSON.parse(currentApp.verify_warnings) : [];
   $("draft-warnings").textContent = warnings.length

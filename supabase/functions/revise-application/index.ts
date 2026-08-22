@@ -1,6 +1,6 @@
 // Revises an existing draft per a chat instruction, still constrained to the source CV.
 import { authedClient, CORS_HEADERS } from "../_shared/supabase.ts";
-import { callGemini, NO_FABRICATION_RULE, parseJsonReply } from "../_shared/gemini.ts";
+import { callGemini, CV_FORMAT_RULE, NO_FABRICATION_RULE, parseJsonReply } from "../_shared/gemini.ts";
 import { verifyDraft } from "../_shared/verify.ts";
 
 Deno.serve(async (req) => {
@@ -31,21 +31,22 @@ Deno.serve(async (req) => {
 
     const lang = app.language === "nl" ? "Dutch" : "English";
     const systemPrompt =
-      `You revise an existing tailored CV and cover letter per the user's instruction. ` +
-      `${NO_FABRICATION_RULE} Keep writing in ${lang}. ` +
-      `Respond as strict JSON: {"cv": "...", "cover_letter": "..."} with no other text.`;
+      `You revise an existing tailored CV (as HTML) and cover letter per the user's instruction. ` +
+      `${NO_FABRICATION_RULE} Keep writing in ${lang}. Preserve the existing CV_html structure and ` +
+      `formatting rules unless the instruction asks to change them: ${CV_FORMAT_RULE} ` +
+      `Respond as strict JSON: {"cv_html": "...", "cover_letter": "..."} with no other text.`;
     const userPrompt =
-      `SOURCE_CV:\n${cv.raw_text}\n\nCURRENT CV DRAFT:\n${app.cv_draft}\n\n` +
+      `SOURCE_CV:\n${cv.raw_text}\n\nCURRENT CV DRAFT (HTML):\n${app.cv_draft}\n\n` +
       `CURRENT COVER LETTER DRAFT:\n${app.cover_letter_draft}\n\n` +
       `USER INSTRUCTION: ${instruction}`;
 
     const parsed = parseJsonReply(await callGemini(systemPrompt, userPrompt));
-    const warnings = await verifyDraft(cv.raw_text, parsed.cv);
+    const warnings = await verifyDraft(cv.raw_text, parsed.cv_html);
 
     const { data: updated, error } = await supabase
       .from("applications")
       .update({
-        cv_draft: parsed.cv,
+        cv_draft: parsed.cv_html,
         cover_letter_draft: parsed.cover_letter,
         verify_warnings: JSON.stringify(warnings),
         updated_at: new Date().toISOString(),
