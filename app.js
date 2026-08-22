@@ -197,7 +197,40 @@ $("approve-btn").addEventListener("click", async () => {
   alert("Marked approved.");
 });
 
-$("print-btn").addEventListener("click", () => window.print());
+// Print only the one document (not the whole app page) by opening it alone in a
+// new tab with its own minimal stylesheet, then invoking the browser's print/save-as-PDF.
+function printDocument(title, bodyHtml) {
+  const win = window.open("", "_blank");
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+<style>
+  body { font-family: Georgia, 'Times New Roman', serif; line-height: 1.4; max-width: 800px;
+         margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+  h1 { font-size: 1.8rem; margin: 0 0 0.15rem; }
+  h2 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.04em;
+       border-bottom: 1px solid #999; margin: 1.1rem 0 0.4rem; padding-bottom: 0.15rem; }
+  p { margin: 0.3rem 0; font-size: 0.95rem; }
+  ul { margin: 0.2rem 0 0.6rem; padding-left: 1.2rem; }
+  li { font-size: 0.95rem; margin: 0.15rem 0; }
+  strong { font-size: 1rem; }
+  pre { white-space: pre-wrap; font-family: inherit; font-size: 0.95rem; }
+  @page { margin: 1.5cm; }
+</style></head><body>${bodyHtml}</body></html>`);
+  win.document.close();
+  win.onload = () => win.print();
+}
+
+$("download-cv-btn").addEventListener("click", () => {
+  if (!currentApp) return;
+  printDocument(`CV — ${currentJob?.title ?? ""}`, currentApp.cv_draft ?? "");
+});
+
+$("download-cover-btn").addEventListener("click", () => {
+  if (!currentApp) return;
+  printDocument(
+    `Cover letter — ${currentJob?.title ?? ""}`,
+    `<pre>${escapeHtml(currentApp.cover_letter_draft ?? "")}</pre>`,
+  );
+});
 
 $("chat-form").addEventListener("submit", async (e) => {
   e.preventDefault();
