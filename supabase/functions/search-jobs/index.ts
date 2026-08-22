@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
     const { supabase, user } = await authedClient(req);
     if (!user) return new Response("unauthorized", { status: 401, headers: CORS_HEADERS });
 
-    const { keywords, location } = await req.json();
+    const { keywords, location, radius_km } = await req.json();
     if (!keywords) return new Response("keywords required", { status: 400, headers: CORS_HEADERS });
 
     const scannedAt = new Date().toISOString();
@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
       url.searchParams.set("app_key", ADZUNA_APP_KEY);
       url.searchParams.set("what", keywords);
       if (location) url.searchParams.set("where", location);
+      if (radius_km) url.searchParams.set("distance", String(radius_km));
       url.searchParams.set("results_per_page", "50");
       url.searchParams.set("content-type", "application/json");
 

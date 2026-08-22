@@ -106,7 +106,11 @@ $("scan-jobs-btn").addEventListener("click", async () => {
   if (!keywords) { $("scan-status").textContent = "Enter keywords first."; return; }
   $("scan-status").textContent = "Scanning...";
   const { data, error } = await sb.functions.invoke("search-jobs", {
-    body: { keywords, location: $("job-location").value.trim() || undefined },
+    body: {
+      keywords,
+      location: $("job-location").value.trim() || undefined,
+      radius_km: Number($("job-radius").value),
+    },
   });
   $("scan-status").textContent = error ? await functionErrorText(error) : `Found ${data.count} jobs.`;
   await loadJobs(error ? null : data.scanned_at);
