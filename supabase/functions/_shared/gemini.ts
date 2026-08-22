@@ -1,5 +1,5 @@
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY")!;
-const MODEL = "gemini-2.5-flash"; // higher output cap than 2.0-flash, needed for full CV + cover letter in one reply
+const MODEL = "gemini-3.6-flash"; // gemini-2.5-flash was retired for new API keys
 
 export async function callGemini(systemPrompt: string, userPrompt: string): Promise<string> {
   const url =
@@ -13,7 +13,6 @@ export async function callGemini(systemPrompt: string, userPrompt: string): Prom
       generationConfig: {
         responseMimeType: "application/json",
         maxOutputTokens: 65536,
-        thinkingConfig: { thinkingBudget: 0 },
       },
     }),
   });
